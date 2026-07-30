@@ -1,0 +1,34 @@
+# =============================================================
+# TradeRoute Logistics — .gitignore
+# =============================================================
+
+# Environment / secrets — NEVER commit
+backend/.env
+.env
+
+# Node modules
+backend/node_modules/
+node_modules/
+
+# Oracle wallet / credentials
+backend/wallet/
+*.ora
+*.sso
+*.p12
+
+# Logs
+backend/logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VSCode (optional — keep if team uses same settings)
+# .vscode/
+
+# Build artifacts
+dist/
+build/

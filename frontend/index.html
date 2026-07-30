@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeRoute Logistics — Operations System</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/extras.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ════════════════════════════════════════════════════════
+       TOP BAR
+       ════════════════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="topbar-logo">
+      <img src="Logo.jpeg" alt="TradeRoute Logistics Logo" class="logo-img" />
+      <div class="logo-text-wrap">
+        <div class="logo-name">Trade<em>Route</em></div>
+        <div class="logo-sub">Logistics Operations</div>
+      </div>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="topbar-right">
+      <!-- Global search -->
+      <div class="topbar-search">
+        <input
+          id="globalSearchInput"
+          type="text"
+          placeholder="Search parcels, clients, drivers…"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') GlobalSearch.run()"
+        />
+        <button onclick="GlobalSearch.run()">⌕</button>
+        <div class="search-dropdown" id="searchDropdown"></div>
+      </div>
+
+      <div class="api-status">
+        <div class="api-dot" id="apiDot"></div>
+        <span id="apiLabel">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════
+       SIDEBAR NAVIGATION
+       ════════════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <div class="sidebar-brand">
+      <img src="Logo.jpeg" alt="TradeRoute Logistics" />
+    </div>
+
+    <div class="sidebar-section">Tracking</div>
+
+    <div class="nav-item active" data-page="track">
+      <span class="nav-icon">📦</span>
+      Parcel Tracking
+    </div>
+
+    <div class="sidebar-section">Operations</div>
+
+    <div class="nav-item" data-page="clients">
+      <span class="nav-icon">👤</span>
+      Client Management
+    </div>
+
+    <div class="nav-item" data-page="routes">
+      <span class="nav-icon">🗺️</span>
+      Routes &amp; Hubs
+    </div>
+
+    <div class="nav-item" data-page="drivers">
+      <span class="nav-icon">🚛</span>
+      Drivers &amp; Fleet
+    </div>
+
+    <div class="sidebar-section">Finance</div>
+
+    <div class="nav-item" data-page="invoices">
+      <span class="nav-icon">🧾</span>
+      Invoices &amp; Billing
+    </div>
+
+    <div class="sidebar-section">Reporting</div>
+
+    <div class="nav-item" data-page="dashboard">
+      <span class="nav-icon">📊</span>
+      Dashboard
+    </div>
+
+    <div class="nav-item" data-page="reports">
+      <span class="nav-icon">📈</span>
+      Reports
+    </div>
+
+    <div class="sidebar-section">Fleet</div>
+
+    <div class="nav-item" data-page="vehicles">
+      <span class="nav-icon">🚚</span>
+      Vehicles
+    </div>
+
+    <div class="sidebar-section">Developer</div>
+
+    <div class="nav-item" data-page="schema">
+      <span class="nav-icon">🗄️</span>
+      DB Schema
+    </div>
+
+    <div class="sidebar-footer">
+      CMPG311 · Database Project<br>
+      Oracle SQL Developer<br>
+      Node.js + Express API<br>
+      POPIA Compliant · 3NF
+    </div>
+
+  </aside>
+
+  <!-- ════════════════════════════════════════════════════════
+       MAIN CONTENT
+       ════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 01 — PARCEL TRACKING
+         ══════════════════════════════════════════════════════ -->
+    <div class="page active" id="page-track">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 01</div>
+          <h1>Parcel Tracking</h1>
+        </div>
+        <button class="btn btn-teal" onclick="Pages.track.showCreateForm()">
+          + New Parcel
+        </button>
+      </div>
+
+      <!-- Track search bar -->
+      <div class="track-bar">
+        <input
+          id="trackInput"
+          type="text"
+          placeholder="Enter tracking code — e.g. TR-240611-83421"
+        />
+        <button onclick="Pages.track.search()">TRACK</button>
+      </div>
+
+      <!-- Tracking result appears here -->
+      <div id="trackResult"></div>
+
+      <!-- Create Parcel Panel (hidden by default) -->
+      <div id="createParcelPanel" style="display:none;">
+        <div class="panel">
+          <div class="panel-head">
+            <span class="panel-title">New Parcel — Intake</span>
+            <button
+              class="btn btn-ghost btn-sm"
+              onclick="document.getElementById('createParcelPanel').style.display='none'"
+            >✕ Close</button>
+          </div>
+          <div class="panel-body">
+            <div class="info-box">
+              The tracking code is automatically generated (e.g. TR-240611-83421).
+              Status is automatically set to <strong>RECEIVED</strong> and an INTAKE delivery event is logged.
+            </div>
+            <form id="parcelForm">
+              <div class="form-grid">
+                <div class="fg">
+                  <label>Sender Client ID</label>
+                  <input name="sender_id" type="number" min="1" placeholder="e.g. 1" required />
+                </div>
+                <div class="fg">
+                  <label>Recipient Client ID</label>
+                  <input name="recipient_id" type="number" min="1" placeholder="e.g. 2" required />
+                </div>
+                <div class="fg">
+                  <label>Weight (kg)</label>
+                  <input name="weight_kg" type="number" step="0.01" min="0.01" placeholder="e.g. 3.50" required />
+                </div>
+                <div class="fg">
+                  <label>Size Category</label>
+                  <select name="size_category">
+                    <option value="SMALL">SMALL</option>
+                    <option value="MEDIUM" selected>MEDIUM</option>
+                    <option value="LARGE">LARGE</option>
+                    <option value="OVERSIZED">OVERSIZED</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>Service Type</label>
+                  <select name="service_type">
+                    <option value="STANDARD" selected>STANDARD</option>
+                    <option value="EXPRESS">EXPRESS</option>
+                  </select>
+                </div>
+                <div class="fg">
+                  <label>Route ID (optional)</label>
+                  <input name="route_id" type="number" min="1" placeholder="e.g. 4" />
+                </div>
+                <div class="fg" style="flex: 1 1 100%;">
+                  <label>Destination Address</label>
+                  <input
+                    name="destination_address"
+                    placeholder="Street number, Street name, Suburb, City, Postal Code"
+                    required
+                  />
+                </div>
+              </div>
+              <div class="flex-row mt-2">
+                <button type="button" class="btn btn-primary" onclick="Pages.track.create()">
+                  CREATE PARCEL
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost"
+                  onclick="document.getElementById('createParcelPanel').style.display='none'"
+                >Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Update Status Panel -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Update Parcel Status</span>
+        </div>
+        <div class="panel-body">
+          <form id="statusForm">
+            <div class="form-grid">
+              <div class="fg">
+                <label>Parcel ID</label>
+                <input id="statusParcelId" name="parcel_id_display" type="number" min="1" placeholder="e.g. 42" />
+              </div>
+              <div class="fg">
+                <label>New Status</label>
+                <select name="status">
+                  <option value="RECEIVED">RECEIVED</option>
+                  <option value="ASSIGNED">ASSIGNED</option>
+                  <option value="IN_TRANSIT">IN_TRANSIT</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="FAILED">FAILED</option>
+                  <option value="RESCHEDULED">RESCHEDULED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Event Type</label>
+                <select name="event_type">
+                  <option value="INTAKE">INTAKE</option>
+                  <option value="ASSIGNED">ASSIGNED</option>
+                  <option value="DISPATCHED">DISPATCHED</option>
+                  <option value="IN_TRANSIT">IN_TRANSIT</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="FAILED">FAILED</option>
+                  <option value="RESCHEDULED">RESCHEDULED</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Outcome Code</label>
+                <select name="outcome_code">
+                  <option value="PENDING">PENDING</option>
+                  <option value="SUCCESS">SUCCESS</option>
+                  <option value="FAILED_ADDRESS">FAILED_ADDRESS</option>
+                  <option value="FAILED_ABSENT">FAILED_ABSENT</option>
+                  <option value="FAILED_REFUSED">FAILED_REFUSED</option>
+                </select>
+              </div>
+              <div class="fg">
+                <label>Recipient Name (if delivered)</label>
+                <input name="recipient_name" placeholder="Name of person who signed" />
+              </div>
+              <div class="fg">
+                <label>Location Notes</label>
+                <input name="location_notes" placeholder="e.g. Left at front door" />
+              </div>
+            </div>
+          </form>
+          <div class="flex-row mt-2">
+            <button class="btn btn-primary" onclick="Pages.track.updateStatus()">
+              UPDATE STATUS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- All parcels table -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">All Parcels</span>
+          <button class="btn btn-ghost btn-sm" onclick="Pages.track.load()">↻ Refresh</button>
+        </div>
+        <div id="parcelsTable">
+          <div class="loading-row"><span class="spinner"></span>Loading parcels…</div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /page-track -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 02 — CLIENT MANAGEMENT
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-clients">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 02</div>
+          <h1>Client Management</h1>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <!-- Client table -->
+        <div class="col-2">
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Client Register</span>
+              <button class="btn btn-ghost btn-sm" onclick="Pages.clients.load()">↻ Refresh</button>
+            </div>
+            <div id="clientsTable">
+              <div class="loading-row"><span class="spinner"></span>Loading clients…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add client form -->
+        <div class="col-1">
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Add New Client</span>
+            </div>
+            <div class="panel-body">
+              <form id="clientForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Full Name / Company Name</label>
+                    <input name="client_name" placeholder="Sipho Nkosi or Builders Warehouse" required />
+                  </div>
+                  <div class="fg">
+                    <label>Client Type</label>
+                    <select name="client_type">
+                      <option value="INDIVIDUAL">INDIVIDUAL</option>
+                      <option value="CORPORATE">CORPORATE</option>
+                      <option value="ECOMMERCE">ECOMMERCE</option>
+                    </select>
+                  </div>
+                  <div class="fg">
+                    <label>Email Address</label>
+                    <input name="email" type="email" placeholder="name@example.co.za" required />
+                  </div>
+                  <div class="fg">
+                    <label>Phone</label>
+                    <input name="phone" placeholder="+27 82 000 0000" />
+                  </div>
+                  <div class="fg">
+                    <label>Physical Address</label>
+                    <input name="address" placeholder="12 Main Rd, Soweto, 1804" required />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.clients.create()">
+                    INSERT CLIENT
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <strong>POPIA Note:</strong> Client data is protected under the
+            Protection of Personal Information Act. Only authorised personnel
+            may access sensitive client records.
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- /page-clients -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 03 — ROUTES & HUBS
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-routes">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 03</div>
+          <h1>Routes &amp; Hubs</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.routes.load()">↻ Refresh All</button>
+      </div>
+
+      <!-- Today's schedule — full width -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Today's Route Schedule</span>
+          <button class="btn btn-ghost btn-sm" onclick="Pages.routes.loadTodaySchedule()">↻</button>
+        </div>
+        <div id="todayRoutesTable">
+          <div class="loading-row"><span class="spinner"></span>Loading today's schedule…</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <!-- All routes table -->
+        <div class="col-2">
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Route Register</span>
+              <button class="btn btn-ghost btn-sm" onclick="Pages.routes.loadAllRoutes()">↻</button>
+            </div>
+            <div id="allRoutesTable">
+              <div class="loading-row"><span class="spinner"></span>Loading routes…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forms column -->
+        <div class="col-1">
+
+          <!-- Assign route form -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Assign Route</span>
+            </div>
+            <div class="panel-body">
+              <div class="info-box">
+                Assigns a driver and vehicle to a route for a given date.
+                Each driver and vehicle can only be assigned once per day
+                (enforced by Oracle UNIQUE constraint).
+              </div>
+              <form id="assignForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Route ID</label>
+                    <input name="route_id" type="number" min="1" placeholder="e.g. 4" required />
+                  </div>
+                  <div class="fg">
+                    <label>Driver ID</label>
+                    <input name="driver_id" type="number" min="1" placeholder="e.g. 7" required />
+                  </div>
+                  <div class="fg">
+                    <label>Vehicle ID</label>
+                    <input name="vehicle_id" type="number" min="1" placeholder="e.g. 11" required />
+                  </div>
+                  <div class="fg">
+                    <label>Assignment Date</label>
+                    <input name="assignment_date" type="date" required />
+                  </div>
+                  <div class="fg">
+                    <label>Total Load (kg) — optional</label>
+                    <input name="total_load_kg" type="number" step="0.1" min="0" placeholder="e.g. 850.5" />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.routes.assign()">
+                    ASSIGN ROUTE
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Add new route form -->
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Add New Route</span>
+            </div>
+            <div class="panel-body">
+              <form id="routeForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Route Code</label>
+                    <input name="route_code" placeholder="e.g. R-39" required />
+                  </div>
+                  <div class="fg">
+                    <label>Route Name</label>
+                    <input name="route_name" placeholder="e.g. Johannesburg → Randburg" required />
+                  </div>
+                  <div class="fg">
+                    <label>Max Capacity (kg)</label>
+                    <input name="max_capacity_kg" type="number" step="0.1" min="1" placeholder="e.g. 1200" required />
+                  </div>
+                  <div class="fg">
+                    <label>Hub ID (optional)</label>
+                    <input name="hub_id" type="number" min="1" placeholder="e.g. 1" />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.routes.createRoute()">
+                    CREATE ROUTE
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Business rules reminder -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Business Rules</span></div>
+            <div class="panel-body">
+              <div class="rule-list">
+                <div class="rule-item">One driver per route per day (UNIQUE constraint)</div>
+                <div class="rule-item orange">One vehicle per day (UNIQUE constraint)</div>
+                <div class="rule-item orange">One route assigned per day (UNIQUE constraint)</div>
+                <div class="rule-item red">Driver must have a valid (non-expired) license</div>
+                <div class="rule-item red">Vehicle must have OPERATIONAL status</div>
+                <div class="rule-item green">Parcels must have a valid route zone destination</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- /page-routes -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 04 — DRIVERS & FLEET
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-drivers">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 04</div>
+          <h1>Drivers &amp; Fleet</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.drivers.load()">↻ Refresh All</button>
+      </div>
+
+      <!-- Drivers table -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Driver Register</span>
+          <button class="btn btn-ghost btn-sm" onclick="Pages.drivers.loadDrivers()">↻</button>
+        </div>
+        <div id="driversTable">
+          <div class="loading-row"><span class="spinner"></span>Loading drivers…</div>
+        </div>
+      </div>
+
+      <!-- Vehicles table -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Vehicle Fleet</span>
+          <button class="btn btn-ghost btn-sm" onclick="Pages.drivers.loadVehicles()">↻</button>
+        </div>
+        <div id="vehiclesTable">
+          <div class="loading-row"><span class="spinner"></span>Loading vehicles…</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <!-- Add Driver -->
+        <div class="col-1">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Add Driver</span></div>
+            <div class="panel-body">
+              <form id="driverForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Full Name</label>
+                    <input name="full_name" placeholder="e.g. Themba Nkosi" required />
+                  </div>
+                  <div class="fg">
+                    <label>License Number</label>
+                    <input name="license_number" placeholder="e.g. LIC-2022-08812" required />
+                  </div>
+                  <div class="fg">
+                    <label>License Expiry Date</label>
+                    <input name="license_expiry" type="date" required />
+                  </div>
+                  <div class="fg">
+                    <label>Phone</label>
+                    <input name="phone" placeholder="+27 82 000 0000" />
+                  </div>
+                  <div class="fg">
+                    <label>Date Hired</label>
+                    <input name="date_hired" type="date" />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.drivers.addDriver()">
+                    ADD DRIVER
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Vehicle -->
+        <div class="col-1">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Add Vehicle</span></div>
+            <div class="panel-body">
+              <form id="vehicleForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Registration Number</label>
+                    <input name="registration" placeholder="e.g. JHB 482 GP" required />
+                  </div>
+                  <div class="fg">
+                    <label>Make</label>
+                    <input name="make" placeholder="e.g. Toyota" />
+                  </div>
+                  <div class="fg">
+                    <label>Model</label>
+                    <input name="model" placeholder="e.g. Hilux" />
+                  </div>
+                  <div class="fg">
+                    <label>Capacity (kg)</label>
+                    <input name="capacity_kg" type="number" step="0.1" min="1" placeholder="e.g. 1200" required />
+                  </div>
+                  <div class="fg">
+                    <label>Service Status</label>
+                    <select name="service_status">
+                      <option value="OPERATIONAL">OPERATIONAL</option>
+                      <option value="MAINTENANCE">MAINTENANCE</option>
+                      <option value="DECOMMISSIONED">DECOMMISSIONED</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.drivers.addVehicle()">
+                    ADD VEHICLE
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- /page-drivers -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 05 — INVOICES & BILLING
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-invoices">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 05</div>
+          <h1>Invoices &amp; Billing</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.invoices.load()">↻ Refresh</button>
+      </div>
+
+      <!-- KPI summary strip -->
+      <div class="kpi-strip" id="invoiceKpis">
+        <div class="kpi">
+          <div class="kpi-val">—</div>
+          <div class="kpi-lbl">Total This Month</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val">—</div>
+          <div class="kpi-lbl">Paid</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val">—</div>
+          <div class="kpi-lbl">Unpaid</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-val">—</div>
+          <div class="kpi-lbl">Overdue</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+
+        <!-- Invoice table -->
+        <div class="col-2">
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Invoice Register</span>
+            </div>
+            <div id="invoicesTable">
+              <div class="loading-row"><span class="spinner"></span>Loading invoices…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generate invoice form -->
+        <div class="col-1">
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Generate Invoice</span></div>
+            <div class="panel-body">
+              <div class="info-box">
+                The invoice amount is <strong>automatically calculated</strong> by
+                matching the parcel's weight, size category, service type, and route
+                zone to the tariff rate table via an Oracle SQL JOIN.
+                No manual amount entry required.
+              </div>
+              <form id="invoiceForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Parcel ID</label>
+                    <input name="parcel_id" type="number" min="1" placeholder="e.g. 42" required />
+                  </div>
+                  <div class="fg">
+                    <label>Client ID (sender / billed party)</label>
+                    <input name="client_id" type="number" min="1" placeholder="e.g. 1" required />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.invoices.generate()">
+                    GENERATE INVOICE
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="warn-box">
+            <strong>Note:</strong> An invoice can only be generated if the parcel
+            has a route assigned with a zone, and if a tariff rate exists for the
+            parcel's weight band, size, and service type.
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- /page-invoices -->
+
+  </main>
+</div>
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 06 — DASHBOARD
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-dashboard">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 06</div>
+          <h1>Operations Dashboard</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.dashboard.load()">↻ Refresh</button>
+      </div>
+
+      <!-- KPI strip — loaded dynamically -->
+      <div class="kpi-strip" id="dashKpis">
+        <div class="kpi"><div class="kpi-val" id="dk-parcels">—</div><div class="kpi-lbl">Active Parcels</div></div>
+        <div class="kpi"><div class="kpi-val" id="dk-drivers" style="color:var(--success)">—</div><div class="kpi-lbl">Drivers On Route</div></div>
+        <div class="kpi"><div class="kpi-val" id="dk-failed"  style="color:var(--danger)">—</div><div class="kpi-lbl">Failed Deliveries</div></div>
+        <div class="kpi"><div class="kpi-val" id="dk-revenue" style="color:var(--teal)">—</div><div class="kpi-lbl">Revenue This Month</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="col-2">
+
+          <!-- In-transit parcels -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">In-Transit Parcels</span></div>
+            <div id="dashTransitTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+          <!-- Recent delivery exceptions -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Recent Delivery Exceptions</span></div>
+            <div id="dashExceptionsTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="col-1">
+
+          <!-- Today's routes summary -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Today's Routes</span></div>
+            <div id="dashRoutesTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+          <!-- Fleet status -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Fleet Status</span></div>
+            <div class="panel-body">
+              <div id="dashFleetStatus">
+                <div class="loading-row"><span class="spinner"></span>Loading…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Invoice summary -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Invoice Summary</span></div>
+            <div class="panel-body">
+              <div id="dashInvoiceSummary">
+                <div class="loading-row"><span class="spinner"></span>Loading…</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- /page-dashboard -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 07 — DB SCHEMA
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-schema">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Oracle SQL Developer</div>
+          <h1>Database Schema</h1>
+        </div>
+      </div>
+
+      <div class="info-box" style="margin-bottom:1.5rem;">
+        Third Normal Form (3NF) relational database — 12 tables, 12 sequences, full FK/CHECK/UNIQUE constraints.
+        Run <strong>traderoute_oracle_ddl.sql</strong> then <strong>traderoute_seed_data.sql</strong> in Oracle SQL Developer.
+      </div>
+
+      <!-- Entity cards grid -->
+      <div id="schemaGrid" style="
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+        gap:1rem;
+        margin-bottom:2rem;
+      "></div>
+
+      <!-- Key SQL Queries reference -->
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Key Oracle SQL Queries</span></div>
+        <div class="panel-body">
+          <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+            <div>
+              <div style="font-family:var(--ff-mono);font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Track a parcel by code</div>
+              <pre class="sql-pre">SELECT p.tracking_code, ps.status_name, de.event_type,
+       de.event_timestamp, de.location_notes,
+       c1.client_name AS sender, c2.client_name AS recipient
+FROM       PARCEL p
+JOIN       PARCEL_STATUS  ps  ON ps.status_id  = p.status_id
+JOIN       CLIENT         c1  ON c1.client_id  = p.sender_id
+JOIN       CLIENT         c2  ON c2.client_id  = p.recipient_id
+LEFT JOIN  DELIVERY_EVENT de  ON de.parcel_id  = p.parcel_id
+WHERE UPPER(p.tracking_code) = UPPER('TR-240601-10001')
+ORDER BY de.event_timestamp ASC;</pre>
+            </div>
+
+            <div>
+              <div style="font-family:var(--ff-mono);font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Today's route schedule</div>
+              <pre class="sql-pre">SELECT r.route_code, r.route_name,
+       d.full_name AS driver, v.registration AS vehicle,
+       ra.total_load_kg,
+       ROUND(ra.total_load_kg / v.capacity_kg * 100, 1) AS load_pct
+FROM   ROUTE_ASSIGNMENT ra
+JOIN   ROUTE   r  ON r.route_id   = ra.route_id
+JOIN   DRIVER  d  ON d.driver_id  = ra.driver_id
+JOIN   VEHICLE v  ON v.vehicle_id = ra.vehicle_id
+WHERE  TRUNC(ra.assignment_date) = TRUNC(SYSDATE)
+ORDER BY r.route_code;</pre>
+            </div>
+
+            <div>
+              <div style="font-family:var(--ff-mono);font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Auto-calculate invoice from tariff rates</div>
+              <pre class="sql-pre">SELECT p.tracking_code, p.weight_kg,
+       p.size_category, p.service_type,
+       t.rate_zar AS invoice_amount
+FROM   PARCEL       p
+JOIN   ROUTE_ZONE   rz ON rz.route_id = p.route_id
+JOIN   TARIFF_RATE  t
+          ON  p.weight_kg     BETWEEN t.weight_band_min AND t.weight_band_max
+          AND p.size_category = t.size_category
+          AND p.service_type  = t.service_type
+          AND rz.zone_id      = t.zone_id
+WHERE  p.parcel_id = 1;</pre>
+            </div>
+
+            <div>
+              <div style="font-family:var(--ff-mono);font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Outstanding invoices per client</div>
+              <pre class="sql-pre">SELECT c.client_name,
+       COUNT(i.invoice_id)  AS invoice_count,
+       SUM(i.amount_zar)    AS total_outstanding
+FROM   INVOICE i
+JOIN   CLIENT  c  ON c.client_id = i.client_id
+WHERE  i.payment_status = 'UNPAID'
+GROUP BY c.client_name
+ORDER BY total_outstanding DESC;</pre>
+            </div>
+
+            <div>
+              <div style="font-family:var(--ff-mono);font-size:10px;color:var(--teal);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Driver performance this month</div>
+              <pre class="sql-pre">SELECT d.full_name,
+       COUNT(de.event_id) AS total_deliveries,
+       SUM(CASE WHEN de.outcome_code = 'SUCCESS' THEN 1 ELSE 0 END) AS successful,
+       ROUND(SUM(CASE WHEN de.outcome_code='SUCCESS' THEN 1 ELSE 0 END)
+             * 100.0 / COUNT(de.event_id), 1) AS success_pct
+FROM       DRIVER           d
+JOIN       ROUTE_ASSIGNMENT ra ON ra.driver_id    = d.driver_id
+JOIN       DELIVERY_EVENT   de ON de.assignment_id = ra.assignment_id
+WHERE      ra.assignment_date >= TRUNC(SYSDATE,'MM')
+GROUP BY   d.full_name
+ORDER BY   success_pct DESC;</pre>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- /page-schema -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 08 — REPORTS
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-reports">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Module 07</div>
+          <h1>Reports &amp; Analytics</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.reports.load()">↻ Refresh</button>
+      </div>
+
+      <!-- System summary KPIs -->
+      <div class="kpi-strip" id="reportKpis">
+        <div class="kpi"><div class="kpi-val" id="rk-parcels">—</div><div class="kpi-lbl">Total Parcels</div></div>
+        <div class="kpi"><div class="kpi-val" id="rk-clients">—</div><div class="kpi-lbl">Clients</div></div>
+        <div class="kpi"><div class="kpi-val" id="rk-drivers">—</div><div class="kpi-lbl">Available Drivers</div></div>
+        <div class="kpi"><div class="kpi-val" id="rk-revenue">—</div><div class="kpi-lbl">Revenue This Month</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="col-2">
+
+          <!-- Driver performance -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Driver Performance — This Month</span></div>
+            <div id="driverPerfTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+          <!-- Route performance -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Route Performance</span></div>
+            <div id="routePerfTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+          <!-- Tariff schedule -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Tariff Rate Schedule</span></div>
+            <div id="tariffTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="col-1">
+
+          <!-- Revenue by month bar chart -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Revenue — Last 6 Months</span></div>
+            <div class="panel-body">
+              <div id="revenueChart">
+                <div class="loading-row"><span class="spinner"></span>Loading…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- License / fleet alerts -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">⚠ System Alerts</span></div>
+            <div class="panel-body">
+              <div id="systemAlerts">
+                <div class="loading-row"><span class="spinner"></span>Loading…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exceptions summary -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Recent Exceptions</span></div>
+            <div id="exceptionsReport">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- /page-reports -->
+
+    <!-- ══════════════════════════════════════════════════════
+         PAGE 09 — VEHICLES
+         ══════════════════════════════════════════════════════ -->
+    <div class="page" id="page-vehicles">
+
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-tag">Fleet Management</div>
+          <h1>Vehicle Fleet</h1>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="Pages.vehicles.load()">↻ Refresh</button>
+      </div>
+
+      <div class="two-col">
+        <div class="col-2">
+
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Fleet Register</span></div>
+            <div id="vehiclesFullTable">
+              <div class="loading-row"><span class="spinner"></span>Loading…</div>
+            </div>
+          </div>
+
+        </div>
+        <div class="col-1">
+
+          <!-- Add vehicle -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Add Vehicle</span></div>
+            <div class="panel-body">
+              <form id="vehicleFullForm">
+                <div class="form-grid" style="flex-direction:column;">
+                  <div class="fg">
+                    <label>Registration Number</label>
+                    <input name="registration" placeholder="e.g. JHB 482 GP" required />
+                  </div>
+                  <div class="fg">
+                    <label>Make</label>
+                    <input name="make" placeholder="e.g. Toyota" />
+                  </div>
+                  <div class="fg">
+                    <label>Model</label>
+                    <input name="model" placeholder="e.g. Hilux 2.8 GD-6" />
+                  </div>
+                  <div class="fg">
+                    <label>Capacity (kg)</label>
+                    <input name="capacity_kg" type="number" step="0.1" min="1" placeholder="e.g. 1200" required />
+                  </div>
+                  <div class="fg">
+                    <label>Service Status</label>
+                    <select name="service_status">
+                      <option value="OPERATIONAL">OPERATIONAL</option>
+                      <option value="MAINTENANCE">MAINTENANCE</option>
+                      <option value="DECOMMISSIONED">DECOMMISSIONED</option>
+                    </select>
+                  </div>
+                  <div class="fg">
+                    <label>Last Service Date</label>
+                    <input name="last_service_date" type="date" />
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <button type="button" class="btn btn-primary" onclick="Pages.vehicles.create()">
+                    ADD VEHICLE
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Quick status update -->
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Update Vehicle Status</span></div>
+            <div class="panel-body">
+              <div class="form-grid" style="flex-direction:column;">
+                <div class="fg">
+                  <label>Vehicle ID</label>
+                  <input id="statusVehicleId" type="number" min="1" placeholder="e.g. 5" />
+                </div>
+                <div class="fg">
+                  <label>New Status</label>
+                  <select id="statusVehicleVal">
+                    <option value="OPERATIONAL">OPERATIONAL</option>
+                    <option value="MAINTENANCE">MAINTENANCE</option>
+                    <option value="DECOMMISSIONED">DECOMMISSIONED</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-2">
+                <button class="btn btn-primary" onclick="Pages.vehicles.updateStatus()">UPDATE STATUS</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!-- /page-vehicles -->
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/vehicles.js"></script>
+<script src="js/search.js"></script>
+
+</body>
+</html>
